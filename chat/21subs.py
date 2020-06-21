@@ -59,7 +59,7 @@ qos = 2
 #Subscripcion simple con tupla (topic,qos)
 #client.subscribe(("sensores/6/hum", qos))
 
-client.subscribe([("usuarios/234", qos),("salas/09/S02", qos)])#<----implementar archivo----------------
+client.subscribe([("usuarios/201700796", qos),("salas/09/S02", qos), ("salas/09/S03", qos)])#<----implementar archivo----------------
 #client.subscribe(("usuarios/#", qos))
 
 #Subscripcion multiple con lista de tuplas
