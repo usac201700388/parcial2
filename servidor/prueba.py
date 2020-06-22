@@ -2,6 +2,7 @@ import socket
 import binascii
 import os
 import logging
+import time
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 IP_ADDR = '167.71.243.238'
@@ -24,25 +25,25 @@ connection, clientAddress = sock.accept()
 try:
     print('Conexion establecida desde', clientAddress)
     data = connection.recv(BUFFER_SIZE)
-    while data:
-        print('\nEsperando instrucciones')
-        print('Recibido: {!r}'.format(data))
-        if data == binascii.unhexlify("01"):
+
+    if data == binascii.unhexlify("01"):
             print('Enviando Archivo...')
             print(os.stat('audior.wav').st_size)
             size = os.stat('audior.wav').st_size
             size = str(size).encode()
             connection.sendall(size)
+            time.sleep(1)
             with open('audior.wav', 'rb') as f:
+                print('Enviando...')
                 connection.sendfile(f, 0)
                 f.close()
             print("\n\nArchivo enviado a: ", clientAddress)
-        elif data == binascii.unhexlify("02"):
+            pass
+    if data == binascii.unhexlify("02"):
             print('Recibir archivo...')
             info = connection.recv(BUFFER_SIZE)
             info = int(info.decode())
             print(info)
-            bytesRecividos = 0
             with open('audior.wav', 'wb') as g:
                 print('Archivo Creado y listo para recibir...')
                 while info:
@@ -53,9 +54,6 @@ try:
                     else:
                         g.write(sound)
                 g.close()
-        elif data == binascii.unhexlify("03"):
-            print('cerrar conexion...')
-            break
 except KeyboardInterrupt:
     sock.close()
 finally:

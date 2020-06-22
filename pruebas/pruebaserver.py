@@ -5,7 +5,15 @@ import logging
 import time
 import os
 import binascii 
-from Data import * #Informacion de la conexion
+# from Data import * #Informacion de la conexion
+MQTT_HOST = "157.245.82.242"
+MQTT_PORT = 1883
+
+MQTT_USER = "proyectos"
+MQTT_PASS = "proyectos980"
+LOG_FILENAME = 'mqtt.log'
+
+
 
 LOG_FILENAME = 'mqtt.log'
 
@@ -40,7 +48,6 @@ def on_message(client, userdata, msg):
         tramaseparada = msg.payload.split(b'-')
         #cmdo = str(msg.payload)
         print(tramaseparada)
-    
     #Y se almacena en el log 
     logCommand = 'echo "(' + str(msg.topic) + ') -> ' + str(msg.payload) + '" >> ' + LOG_FILENAME
     os.system(logCommand)
