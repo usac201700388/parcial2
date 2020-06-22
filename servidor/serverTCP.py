@@ -4,7 +4,7 @@ import os
 import logging
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-IP_ADDR = '167.71.243.238'
+IP_ADDR = ''
 IP_ADDR_ALL = ''
 IP_PORT = 9809
 

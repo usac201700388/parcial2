@@ -1,21 +1,29 @@
-#prueba Cliente
 import paho.mqtt.client as mqtt
 import logging
 import time
-import os
-import threading
-import sys 
+import os 
+import socket
+import binascii
 from Data import * #Informacion de la conexion
 
 LOG_FILENAME = 'mqtt.log'
+
+SERVER_IP = ''
+SEVER_PORT = 9809
+BUFFER_SIZE = 64 * 1024
 
 DEFAULT_DELAY = 1 #1 minuto
 
 #Configuracion inicial de logging
 logging.basicConfig(
     level = logging.INFO, 
-    format = '\n[%(levelname)s] (%(threadName)-10s) %(message)s'
+    format = '\n[%(levelname)s] (%(threadName)-10s) %(message)s\n'
     )
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_address = (SERVER_IP, SEVER_PORT)
+print('Conectando a  {} en el puerto {}'.format(*server_address))
+
 
 #Callback que se ejecuta cuando nos conectamos al broker
 def on_connect_sub(client, userdata, rc):
@@ -26,7 +34,7 @@ def on_connect_sub(client, userdata, rc):
 def on_message(client, userdata, msg):
     #Se muestra en pantalla informacion que ha llegado
     logging.info("Ha llegado el mensaje al topic: " + str(msg.topic))
-    logging.info("El contenido del mensaje es: " + str(msg.payload))
+    logging.info("El contenido del mensaje es: " + str(msg.payload)+'\n')
     
     #Y se almacena en el log 
     logCommand = 'echo "(' + str(msg.topic) + ') -> ' + str(msg.payload) + '" >> ' + LOG_FILENAME
@@ -50,7 +58,7 @@ clientp = mqtt.Client(clean_session=True) #Nueva instancia de cliente
 client.on_connect_sub = on_connect_sub #Se configura la funcion "Handler" cuando suceda la conexion
 client.on_message = on_message #Se configura la funcion "Handler" que se activa al llegar un mensaje a un topic subscrito
 clientp.on_connect_pub = on_connect_pub #Se configura la funcion "Handler" cuando suceda la conexion
-client.on_publish = on_publish #Se configura la funcion "Handler" que se activa al publicar algo
+clientp.on_publish = on_publish #Se configura la funcion "Handler" que se activa al publicar algo
 
 
 client.username_pw_set(MQTT_USER, MQTT_PASS) #Credenciales requeridas por el broker
@@ -73,27 +81,6 @@ def publishData(topicRoot, topicName, value, qos = 0, retain = False):
     topics = topicRoot + "/" + topicName
     client.publish(topics, value, qos, retain)
 
-
-def tramaAlive(topic_c = 'comandos', grupo = '09'):
-   
-    logging.info('enviando alives')
-    al = '\x04'
-    separador = '-'
-    carne = '201709400'
-    while True:
-        publishData(topic_c, grupo, al+separador+carne)
-        time.sleep(2)
-        
-
-
-hiloTA = threading.Thread(name = 'Trama ALIVE',
-                        target = tramaAlive,
-                        args = (()),
-                        daemon = True
-                        )
-
-hiloTA.start()
-
     
 print('\n')
 print(' ========================================================')
@@ -109,6 +96,8 @@ print('\n')
 #Iniciamos el thread (implementado en paho-mqtt) para estar atentos a mensajes en los topics subscritos
 client.loop_start()
 #client.loop_forever()
+
+sock.connect(server_address)
 
 #El thread de MQTT queda en el fondo, mientras en el main loop hacemos otra cosa
 
@@ -151,7 +140,25 @@ try:
                     print('incorrecto pruebe de nuevo')    
 
             elif opcion == 2:
-                print('no funciona :(, ingrese de nuevo')
+
+                sock.sendall(binascii.unhexlify("02"))
+                dur = str(input('\nIngrese duracion de audio(max=30): '))
+                print('Iniciando grabacion...')
+                os.system('arecord -d '+ str(dur) + ' -f U8 -r 8000 audio.wav')
+                print('Grabacion finalizada...')
+                print(os.stat('audio.wav').st_size)
+                size = os.stat('audio.wav').st_size
+                size = str(size).encode()
+                sock.sendall(size)
+                time.sleep(DEFAULT_DELAY)
+                with open('audio.wav', 'rb') as g:
+                    print('Enviando archivo...')
+                    sock.sendfile(g, 0)
+                    g.close()
+                # sock.close()
+                print('\n\nEnviado a  {} en el puerto {}'.format(*server_address))
+
+                #print('no funciona :(, ingrese de nuevo')
 
             elif opcion == 3:
                 break
@@ -171,19 +178,11 @@ try:
 
 except KeyboardInterrupt:
     logging.warning("Desconectando del broker...")
-    logging.info("Terminando hilos")
-    
-#    if hiloTA.is_alive():
-#        hiloTA._stop()
 
 finally:
-    
-    logging.info('no mas alives')
+
     client.loop_stop() #Se mata el hilo que verifica los topics en el fondo
     client.disconnect() #Se desconecta del broker
     clientp.disconnect()
-    #logging.info("Desconectado del broker. Saliendo...")
-    #sys.exit()
 
-
-
+    logging.info("Desconectado del broker. Saliendo...")
