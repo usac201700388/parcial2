@@ -6,11 +6,7 @@ import os
 import threading
 from Globales import*
 from datetime import datetime
-
-#JGPA funcion para crear una instancia de cliente mqtt
-def client_instance():
-    client = mqtt.Client(clean_session=True)
-    return client
+from ClaseCliente import ClientManagement
 
 #JGPA Diseno de banners para imprimir menu
 def banner1():
@@ -34,124 +30,13 @@ def banner3():
     print('==> 2. Sala')    
 
 
-# JDCR Creacion de la Clase que manejara el Cliente
-class ClientManagement:
-    ''' JDCR Creacion del constructor en donde se le dice cuales sera los atributos del objeto servidor.
-      Entre los cuales estan la direcion IP, el Usuario de MQTT con su password
-     y los datos de nuestro grupo.''' 
-    def __init__(self, ip_address, user_mqtt, password, port_mqtt, port_tcp=None, user=FILE_USERS, rooms=FILE_ROOMS, group=GROUP_NUMBER):
-        self.ip = ip_address
-        self.user = user_mqtt
-        self.password = password
-        self.portM = port_mqtt
-        self.portT = port_tcp
-        self.participants = user
-        self.Room = rooms
-        self.Groups = group
-        self.instance = client_instance()
-        self.Quality = 2
-    
-    def server_mqtt(self):
-        client = self.instance
-        pub = self.instance
-        logging.basicConfig(level=logging.INFO, format='\n[%(levelname)s] (%(threadName)-10s) %(message)s')
-        logging.basicConfig(level=logging.ERROR, format='\n[%(levelname)s] (%(threadName)-10s) %(message)s')
-
-        def on_connect_sub(client, userdata, rc):
-            logging.info("Conectado al broker")
-            
-        def on_message(client, userdata, msg):
-            logging.info("Ha llegado el mensaje al topic: " + str(msg.topic))
-
-            if 'audio' in str(msg.topic):
-                x = self.audio()
-
-                for i in range(0, len(x)):
-                    if str(msg.topic) == x[i]:
-                        #EMVB Se guarda la fecha y hora exacta en la que ingresa un mensaje de audio, con un formato definido
-                        fecha = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
-                        with open(str(fecha)+'.wav', 'wb') as recibido:
-                            data = msg.payload
-                            recibido.write(data)
-                            recibido.close()
-
-                        hilorep = threading.Thread(name = 'reproduccion',target = self.play_audio, args = (str(fecha)+'.wav',),daemon = False)
-                        hilorep.start()
-            else:
-                logging.info("El contenido del mensaje es: " + str(msg.payload, 'utf-8'))
-
-        def on_connect_pub(client, userdata, flags, rc):
-            connection_text = "CONNACK recibido del broker con codigo: " + str(rc)
-            logging.info(connection_text)
-            
-        def on_publish(client, userdata, mid):
-            publish_text = "Publicacion satisfactoria"
-            logging.debug(publish_text)
-
-        client.on_connect_sub = on_connect_sub
-        client.on_message = on_message
-        pub.on_connect_pub = on_connect_pub
-        client.on_publish = on_publish
-        client.username_pw_set(self.user, self.password)
-    
-    
-    def connect(self):
-        client = self.instance
-        client.connect(host=self.ip, port=self.portM)
-
-    def disconnect(self):
-        client = self.instance
-        client.disconnect()
-    
-    def subscribers(self):
-        topic = []
-        with open(self.participants, 'r') as users:
-            for i in users:
-                split_users = i.split(',')
-                tuple_users = ('usuarios' + '/' + split_users[0], self.Quality)
-                tuple_audio = ('audio' + '/' + self.Groups + '/'+ split_users[0], self.Quality)
-                topic.append(tuple_audio)
-                topic.append(tuple_users)
-            users.close()
-        with open(self.Room, 'r') as rooms:
-            for i in rooms:
-                split_rooms = i.split('\n')
-                tuple_rooms = ('salas' + '/' + self.Groups + '/' + split_rooms[0][2:], self.Quality)
-                tuple_rooms_audio = ('audio' + '/' + self.Groups + '/' + self.Groups + split_rooms[0][2:], self.Quality)
-                topic.append(tuple_rooms_audio)
-                topic.append(tuple_rooms)
-            rooms.close()
-        return topic
-
-    def audio(self):
-        topics_audio = self.subscribers()
-        Tip_audio = []
-        for i in topics_audio:
-            if 'audio' in i[0]:
-                Tip_audio.append(i[0])
-        return Tip_audio   
-
-    
-    def subscription(self):
-        client = self.instance
-        list_topics = self.subscribers()
-        client.subscribe(list_topics[:])
-        client.loop_start()
-    
-    def publish_data(self, topic_root, topic_name, value):
-        client = self.instance
-        topics = topic_root + "/" + topic_name
-        client.publish(topics, value, self.Quality, retain=False)
-    
-    def play_audio(self, fileName):
-        logging.info('Audio guardado')
-        cont = 'aplay '+ str(fileName)
-        os.system(cont)
-
-#JGPA Iniciamos la conexion con el server de mqtt    
-chat = ClientManagement(MQTT_HOST, MQTT_USER, MQTT_PASS, MQTT_PORT)
+#JDCR Creamos chat como objeto  ClientManagement
+chat = ClientManagement(MQTT_HOST, MQTT_USER, MQTT_PASS, MQTT_PORT, user=FILE_USERS, rooms=FILE_ROOMS, group=GROUP_NUMBER)
+# JDCR Lo configuramos con sub/pub mqtt
 chat.server_mqtt()
+#JDCR lo conectamos 
 chat.connect()
+# JDCR y hacemos la subscripcion
 chat.subscription()
 
 #JGPA Inicia el menu principal
