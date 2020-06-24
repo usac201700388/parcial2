@@ -1,3 +1,4 @@
+#JGPA Importamos las librerias que vamos a utilizar
 import paho.mqtt.client as mqtt
 import logging
 import time
@@ -6,17 +7,19 @@ import threading
 from Globales import*
 from datetime import datetime
 
-
+#JGPA funcion para crear una instancia de cliente mqtt
 def client_instance():
     client = mqtt.Client(clean_session=True)
     return client
 
+#JGPA Diseno de banners para imprimir menu
 def banner1():
     print('\n')
     print(' ========================================================')
     print(' |                                                      |')
     print(' |               Bienvenido al chat de Voz!             |')
     print(' |                       Parcial 2                      |')
+    print(' |                       Grupo #09                      |')
     print(' |                                                      |')
     print(' ========================================================')
     print('\n')
@@ -135,44 +138,61 @@ class ClientManagement:
         cont = 'aplay '+ str(fileName)
         os.system(cont)
 
-    
+#JGPA Iniciamos la conexion con el server de mqtt    
 chat = ClientManagement(MQTT_HOST, MQTT_USER, MQTT_PASS, MQTT_PORT)
 chat.server_mqtt()
 chat.connect()
 chat.subscription()
-print(chat.subscribers())
+#print(chat.subscribers())
+#JGPA Inicia el menu principal
 banner1()
 
+#JGPA Usamos try para poder manejar las excepciones
 try:
     while True:
         try:
             banner2()
+            #JGPA Pedimos al usuario una opcion
             opcion = int(input('Escoja una opcion: '))
-
+            
+            #JGPA Si la opcion fue 1...
             if opcion == 1 :
                 banner3()
+                #JGPA Preguntamos si es a un usuario o a una sala
                 destino = int(input('Enviar a usuario o sala? '))
-
+                
+                #JGPA Si es a un usuario...
                 if destino == 1:
-                    carne = int(input('\nIngrese usuario(carne): '))    
+                    #JGPA Preguntamos cual es el usuario
+                    carne = int(input('\nIngrese usuario(carne): '))
+                    #JGPA Se ingresa el mensaje    
                     mensaje_a_enviar = str(input('Escriba el mensaje:\n\n'))
+                    #JGPA Se envia el mensaje
                     chat.publish_data('usuarios', str(carne), mensaje_a_enviar)
                     logging.info("El mensaje ha sido enviado")
                 
+                #JGPA Si es a una sala...
                 elif destino == 2:
+                    #JGPA Preguntamos el numero de sala()
                     opc_sala = int(input('Ingrese el numero de sala[max 99](sin ceros a la izquierda): '))
+                    #JGPA Verificamos que el numero sea correcto
                     if len(str(opc_sala)) == 2:
-                        sala = '09/S'+str(opc_sala)
+                        sala = '09/S'+str(opc_sala)#JGPA No agregamos cero
                     elif len(str(opc_sala)) == 1:
-                        sala = '09/S0'+str(opc_sala)
+                        sala = '09/S0'+str(opc_sala)#JGPA Si agregamos cero
                     else:
+                        #JGPA Si se ingreso algo incorrecto, repetimos el ciclo desde el inicio
                         logging.warning('Numero incorrecto. Intente de nuevo')
                         continue        
+                    
+                    #JGPA Se ingresa el mensaje
                     mensaje_a_enviar = str(input('Escriba el mensaje:\n\n'))
+                    #JGPA Se envia el mensaje
                     chat.publish_data('salas', sala, mensaje_a_enviar)
                     logging.info("El mensaje ha sido enviado")
                 
                 else:
+                    #JGPA Si no se ingresa un destino correcto, hay una advertencia
                     logging.warning('Opcion incorrecta. Intente de nuevo')
             
             elif opcion == 2:
@@ -226,9 +246,12 @@ try:
             logging.error('Error: Respuesta invalida')
         
         time.sleep(DEFAULT_DELAY)
+
+#JGPA Salimos del programa al presionar Ctrl C
 except KeyboardInterrupt:
     pass
 
+#JGPA Desconectamos todo y salimos del programa
 finally:
     logging.warning("Saliendo del programa...")
     chat.disconnect()
