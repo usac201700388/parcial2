@@ -93,7 +93,7 @@ class ClientManagement:
     
     def connect(self):
         client = self.instance
-        client_p = self.instance
+        pub = self.instance
         client.connect(host=self.ip, port=self.portM)
 
     def disconnect(self):
