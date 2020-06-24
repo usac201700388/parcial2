@@ -34,9 +34,11 @@ def banner3():
     print('==> 2. Sala')    
 
 
-
+# JDCR Creacion de la Clase que manejara el Cliente
 class ClientManagement:
-    
+    ''' JDCR Creacion del constructor en donde se le dice cuales sera los atributos del objeto servidor.
+      Entre los cuales estan la direcion IP, el Usuario de MQTT con su password
+     y los datos de nuestro grupo.''' 
     def __init__(self, ip_address, user_mqtt, password, port_mqtt, port_tcp=None, user=FILE_USERS, rooms=FILE_ROOMS, group=GROUP_NUMBER):
         self.ip = ip_address
         self.user = user_mqtt
@@ -61,25 +63,23 @@ class ClientManagement:
         def on_message(client, userdata, msg):
             logging.info("Ha llegado el mensaje al topic: " + str(msg.topic))
 
-            if (str(msg.topic) == 'audio/09/201700796' or str(msg.topic) == 'audio/09/09S01'):
-                #EMVB Se guarda la fecha y hora exacta en la que ingresa un mensaje de audio, con un formato definido
-                fecha = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
-                with open(str(fecha)+'.wav', 'wb') as recibido:
-                    data = msg.payload
-                    recibido.write(data)
-                    recibido.close()
+            if 'audio' in str(msg.topic):
+                x = self.audio()
 
-                hilorep = threading.Thread(name = 'reproduccion',
-                        target = self.play_audio,
-                        args = (str(fecha)+'.wav',),
-                        daemon = False
-                        )
-                hilorep.start()
+                for i in range(0, len(x)):
+                    if str(msg.topic) == x[i]:
+                        #EMVB Se guarda la fecha y hora exacta en la que ingresa un mensaje de audio, con un formato definido
+                        fecha = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
+                        with open(str(fecha)+'.wav', 'wb') as recibido:
+                            data = msg.payload
+                            recibido.write(data)
+                            recibido.close()
+
+                        hilorep = threading.Thread(name = 'reproduccion',target = self.play_audio, args = (str(fecha)+'.wav',),daemon = False)
+                        hilorep.start()
             else:
                 logging.info("El contenido del mensaje es: " + str(msg.payload, 'utf-8'))
 
-            
-            
         def on_connect_pub(client, userdata, flags, rc):
             connection_text = "CONNACK recibido del broker con codigo: " + str(rc)
             logging.info(connection_text)
@@ -97,7 +97,6 @@ class ClientManagement:
     
     def connect(self):
         client = self.instance
-        pub = self.instance
         client.connect(host=self.ip, port=self.portM)
 
     def disconnect(self):
@@ -106,25 +105,35 @@ class ClientManagement:
     
     def subscribers(self):
         topic = []
-        with open('usuarios.txt', 'r') as users:
+        with open(self.participants, 'r') as users:
             for i in users:
                 split_users = i.split(',')
                 tuple_users = ('usuarios' + '/' + split_users[0], self.Quality)
+                tuple_audio = ('audio' + '/' + self.Groups + '/'+ split_users[0], self.Quality)
+                topic.append(tuple_audio)
                 topic.append(tuple_users)
             users.close()
-        with open('salas.txt', 'r') as rooms:
+        with open(self.Room, 'r') as rooms:
             for i in rooms:
                 split_rooms = i.split('\n')
                 tuple_rooms = ('salas' + '/' + self.Groups + '/' + split_rooms[0][2:], self.Quality)
+                tuple_rooms_audio = ('audio' + '/' + self.Groups + '/' + self.Groups + split_rooms[0][2:], self.Quality)
+                topic.append(tuple_rooms_audio)
                 topic.append(tuple_rooms)
             rooms.close()
-        topic.append(('audio/' + self.Groups + '/#', self.Quality))
-        # topic.append(('comandos/' + self.Groups + '/#', self.Quality))
         return topic
+
+    def audio(self):
+        topics_audio = self.subscribers()
+        Tip_audio = []
+        for i in topics_audio:
+            if 'audio' in i[0]:
+                Tip_audio.append(i[0])
+        return Tip_audio   
+
     
     def subscription(self):
         client = self.instance
-        client_p = self.instance
         list_topics = self.subscribers()
         client.subscribe(list_topics[:])
         client.loop_start()
@@ -144,7 +153,7 @@ chat = ClientManagement(MQTT_HOST, MQTT_USER, MQTT_PASS, MQTT_PORT)
 chat.server_mqtt()
 chat.connect()
 chat.subscription()
-#print(chat.subscribers())
+
 #JGPA Inicia el menu principal
 banner1()
 
@@ -283,10 +292,3 @@ except KeyboardInterrupt:
 finally:
     logging.warning("Saliendo del programa...")
     chat.disconnect()
-
-
-
-
-
-
-
