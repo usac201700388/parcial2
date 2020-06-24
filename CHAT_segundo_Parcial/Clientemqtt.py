@@ -62,6 +62,7 @@ class ClientManagement:
             logging.info("Ha llegado el mensaje al topic: " + str(msg.topic))
 
             if (str(msg.topic) == 'audio/09/201700796' or str(msg.topic) == 'audio/09/09S01'):
+                #EMVB Se guarda la fecha y hora exacta en la que ingresa un mensaje de audio, con un formato definido
                 fecha = datetime.now().strftime("%d-%m-%Y_%H:%M:%S")
                 with open(str(fecha)+'.wav', 'wb') as recibido:
                     data = msg.payload
@@ -195,54 +196,81 @@ try:
                     #JGPA Si no se ingresa un destino correcto, hay una advertencia
                     logging.warning('Opcion incorrecta. Intente de nuevo')
             
+            #EMVB Si la opcion fue 2...
             elif opcion == 2:
+                #EMVB Se le pide al usuario la duracion de la grabacion de video
                 duracion = int(input('Ingrese la duracion en segundos(max 30): '))
+                #EMVB So lo se permite una duracion de hasta 30 segundos
                 if duracion <= 30:
 
                     banner3()
+                    #EMVB Se le pregunta si lo envia a una sala o a un usuario
                     destino2 = int(input('Enviar a usuario o sala? '))
 
+                    #EMVB Si eligio a un usuario
                     if destino2 == 1:
+                        #EMVB Se le pide el carnet del usuario(ID)
                         carne2 = int(input('\nIngrese usuario(carne): '))
                         logging.info('Grabe su mensaje')
+                        #EMVB Empieza la grabacion del audio en base a la duracion que igreso el usuario
                         os.system('arecord -d '+str(duracion)+' -f U8 -r 8000 audioparaenviar.wav')
                         logging.info('Mensaje grabado')
 
+                        #EMVB Se abre el archivo en el que se grabo el audio y se comienza su lectura en binario
                         file = open('audioparaenviar.wav', 'rb')
+                        #EMVB Se guarda en una variable toda la lectura del archivo
                         audiostring = file.read()
+                        #EMVB Se determina que tanta memoria ocupa el archivo
                         bytesArray = bytes(audiostring)
+                        #EMVB Se publica el archivo al usuario que se selecciono con el tamaño del archivo que debe esperar
                         chat.publish_data('audio/09', str(carne2), bytesArray)
                         logging.info('Mensaje enviado')
 
+                    #EMVB Si eligio una sala
                     elif destino2 == 2:
+                        #EMVB Se le pide el numero de la sala
                         opc_sala2 = int(input('Ingrese numero de sala[max 99](sin ceros a la izquierda): '))
+                        #EMVB Si se puso el numero de una sala mayor a 9 solo se agrega el numero de la sala solicitada
                         if len(str(opc_sala2)) == 2:
                             sala = '09S'+str(opc_sala2)
+                        #EMVB Si eligio un numero de sala menor a 10, se agrega un 0 a la izquierda para que concuerde con el formato de dos digitos
                         elif len(str(opc_sala2)) == 1:
                             sala = '09S0'+str(opc_sala2)
+                        #EMVB Si puso un numero mayor a 99 o no puso un numero, el sistema le informa del error
                         else:
                             logging.warning('Numero incorrecto. Intente de nuevo')
                             continue        
                         logging.info('Grabe su mensaje')
+                        #EMVB Empieza la grabacion del audio en base a la duracion que igreso el usuario
                         os.system('arecord -d '+str(duracion)+' -f U8 -r 8000 audioparaenviar.wav')
                         logging.info('Mensaje grabado')
 
+                        #EMVB Se abre el archivo en el que se grabo el audio y se comienza su lectura en binario
                         file = open('audioparaenviar.wav', 'rb')
+                        #EMVB Se guarda en una variable toda la lectura del archivo
                         audiostring = file.read()
+                        #EMVB Se determina que tanta memoria ocupa el archivo
                         bytesArray = bytes(audiostring)
+                        #EMVB Se publica el archivo a la sala que se selecciono con el tamaño del archivo que se debe esperar
                         chat.publish_data('audio/09', sala, bytesArray)
                         logging.info('mensaje enviado')
 
                     else:
+                        #EMVB Se le informa al usuario que no eligio una sala o un usuario
                         logging.warning('Opcion incorrecta. Intente de nuevo')                   
                 else:
+                    #EMVB Se le informa al usuario que no eligio mensaje de texto o de audio
                     logging.warning('Valor incorrecto. Intente de nuevo')
+            #EMVB Si la opcion es 3...
             elif opcion == 3:
+                #EMVB Termina el proceso
                 break
 
             else:
+                #EMVB Se le informa al usuario que no ingreso una de las opciones presentadas
                 logging.warning('Opcion incorrecta. Intente de nuevo')
         except ValueError:
+            #EMVB Se le informa al usuario que no puso un comando correcto para elegir una opcion
             logging.error('Error: Respuesta invalida')
         
         time.sleep(DEFAULT_DELAY)
